@@ -7,7 +7,7 @@
   var HIST_KEY = 'tc.history.v1';
   var DURATIONS = [60, 120, 180, 240, 300];
   var SENS_ANGLE = { high: 22, mid: 30, low: 38 };
-  var DEFAULTS = { sens: 'mid', sound: true, swap: false, duration: 240 };
+  var DEFAULTS = { tilt: true, sens: 'mid', sound: true, swap: false, duration: 240 };
 
   var settings = loadSettings();
   var state = 'home';          // home | countdown | play | flash | paused | result
@@ -122,10 +122,12 @@
     if (!pendingCat) return;
     $('btn-start').disabled = true;
     GameAudio.unlock();
-    // iOS 要求 requestPermission 在点击手势内发起：这里是本次点击后的第一个 await
-    var perm = await Tilt.prepare();
-    if (perm === 'denied') toast('未授权传感器，本局用点按模式玩');
-    else if (perm === 'unsupported') toast('此设备不支持倾斜检测，用点按模式玩');
+    if (settings.tilt) {
+      // iOS 要求 requestPermission 在点击手势内发起：这里是本次点击后的第一个 await
+      var perm = await Tilt.prepare();
+      if (perm === 'denied') toast('未授权传感器，本局用点按模式玩');
+      else if (perm === 'unsupported') toast('此设备不支持倾斜检测，用点按模式玩');
+    }
     $('modal-setup').hidden = true;
     var cat = pendingCat;
     await beginCountdown(cat, settings.duration);
@@ -138,33 +140,38 @@
       cat: cat, duration: dur,
       deck: shuffle(catWords(cat).slice()), idx: -1,
       correct: [], skipped: [],
-      paused: false, ended: false, touchMode: false,
+      paused: false, ended: false, touchMode: !settings.tilt,
       flashPending: false, resumeWithNext: false
     };
     state = 'countdown';
     setGaming(true);
     showScreen('screen-countdown');
     $('cd-text').textContent = '准备!';
-    $('cd-hint').textContent = '摆好姿势，正对观众';
+    $('cd-hint').textContent = settings.tilt ? '摆好姿势，正对观众' : '点按模式：左跳过 · 右正确';
     GameAudio.play('go');
 
-    Tilt.setHandler(onTilt);
-    Tilt.setOptions({ threshold: SENS_ANGLE[settings.sens] || 30, swap: !!settings.swap });
-    var calP = Tilt.calibrate(700, 2000); // 倒数期间完成基准采样
+    var calP = null;
+    if (settings.tilt) {
+      Tilt.setHandler(onTilt);
+      Tilt.setOptions({ threshold: SENS_ANGLE[settings.sens] || 30, swap: !!settings.swap });
+      calP = Tilt.calibrate(700, 2000); // 倒数期间完成基准采样
+    }
 
     await wait(900);
     for (var n = 3; n >= 1; n--) {
       $('cd-text').textContent = n;
-      $('cd-hint').textContent = '保持住姿势…';
+      if (settings.tilt) $('cd-hint').textContent = '保持住姿势…';
       GameAudio.play('tick');
       await wait(800);
     }
-    var base = await calP;
-    if (!base && !round.touchMode) {
-      round.touchMode = true;
-      toast('未检测到传感器，点按屏幕两侧玩');
-    } else {
-      GameAudio.play('calib');
+    if (calP) {
+      var base = await calP;
+      if (!base) {
+        round.touchMode = true;
+        toast('未检测到传感器，点按屏幕两侧玩');
+      } else {
+        GameAudio.play('calib');
+      }
     }
     beginPlay();
   }
@@ -262,11 +269,10 @@
   async function resumeGame() {
     if (!round || !round.paused) return;
     $('modal-pause').hidden = true;
-    if (Tilt.orientationChanged()) {
+    if (settings.tilt && Tilt.orientationChanged()) {
       toast('姿势变了，重新校准…');
       var base = await Tilt.calibrate(600, 900);
-      if (!base) round.touchMode = true;
-      else round.touchMode = false;
+      round.touchMode = !base;
       document.body.classList.toggle('touch-mode', round.touchMode);
     }
     round.paused = false;
@@ -348,6 +354,7 @@
   // ---------- 事件绑定 ----------
   buildGrid();
   GameAudio.setMuted(!settings.sound);
+  GameAudio.loadCorrect('mp3/wo.mp3'); // 自定义「正确」音效，失败时自动回退合成音
 
   // 首次交互解锁音频（iOS 要求）
   document.addEventListener('pointerdown', function once() {
@@ -360,10 +367,19 @@
   $('btn-start').addEventListener('click', onStart);
   $('btn-back').addEventListener('click', function () { $('modal-setup').hidden = true; });
 
+  bindSeg('seg-tilt', function () { return settings.tilt ? 'on' : 'off'; },
+    function (v) { settings.tilt = v === 'on'; applyTiltRows(); });
   bindSeg('seg-sens', function () { return settings.sens; }, function (v) { settings.sens = v; });
   bindSeg('seg-swap', function () { return settings.swap ? 'yes' : 'no'; }, function (v) { settings.swap = v === 'yes'; });
   bindSeg('seg-sound', function () { return settings.sound ? 'on' : 'off'; },
     function (v) { settings.sound = v === 'on'; GameAudio.setMuted(!settings.sound); });
+
+  // 关闭倾斜控制时隐藏灵敏度/方向设置
+  function applyTiltRows() {
+    $('row-sens').hidden = !settings.tilt;
+    $('row-swap').hidden = !settings.tilt;
+  }
+  applyTiltRows();
 
   var clearArmed = false;
   var clearReset = null;

@@ -3,6 +3,8 @@
 window.GameAudio = (function () {
   var ctx = null;
   var muted = false;
+  var correctUrl = null;
+  var correctBuffer = null;
 
   function ensure() {
     if (!ctx) {
@@ -13,7 +15,48 @@ window.GameAudio = (function () {
     return ctx;
   }
 
-  function unlock() { ensure(); }
+  function unlock() {
+    ensure();
+    // 音频上下文解锁后（重）尝试加载自定义正确音效
+    if (correctUrl && !correctBuffer) loadBuffer();
+  }
+
+  // 播放解码好的 mp3（Web Audio 在 iOS 上解锁一次后可随时播放，不依赖手势）
+  function playBuffer(buf, vol) {
+    var c = ensure();
+    if (!c || muted) return;
+    var src = c.createBufferSource();
+    var g = c.createGain();
+    g.gain.value = vol || 0.9;
+    src.buffer = buf;
+    src.connect(g); g.connect(c.destination);
+    src.start();
+  }
+
+  function decode(c, ab) {
+    return new Promise(function (res, rej) {
+      try {
+        var p = c.decodeAudioData(ab, res, rej);
+        if (p && typeof p.then === 'function') p.then(res, rej);
+      } catch (e) { rej(e); }
+    });
+  }
+
+  // 加载自定义「正确」音效；失败时静默回退到合成音
+  function loadBuffer() {
+    var c = ensure();
+    if (!c || !correctUrl || correctBuffer) return Promise.resolve(!!correctBuffer);
+    return fetch(correctUrl)
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.arrayBuffer(); })
+      .then(function (ab) { return decode(c, ab); })
+      .then(function (buf) { correctBuffer = buf; return true; })
+      .catch(function () { return false; });
+  }
+
+  function loadCorrect(url) {
+    correctUrl = url;
+    return loadBuffer();
+  }
 
   function beep(freq, dur, type, vol, delay) {
     var c = ensure();
@@ -39,11 +82,16 @@ window.GameAudio = (function () {
     calib:   function () { beep(1046, 0.08, 'sine', 0.10); }
   };
 
-  function play(name) { if (sounds[name]) sounds[name](); }
+  function play(name) {
+    if (name === 'correct' && correctBuffer) { playBuffer(correctBuffer); return; }
+    if (sounds[name]) sounds[name]();
+  }
 
   return {
     unlock: unlock,
     play: play,
+    loadCorrect: loadCorrect,
+    get correctReady() { return !!correctBuffer; },
     setMuted: function (m) { muted = m; },
     get muted() { return muted; }
   };

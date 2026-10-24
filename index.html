@@ -102,12 +102,17 @@
   <div class="modal" id="modal-settings" hidden>
     <div class="modal-card">
       <div class="m-title small">设置</div>
-      <div class="set-row"><span>倾斜灵敏度</span>
+      <div class="set-row"><span>倾斜控制</span>
+        <div class="seg" id="seg-tilt">
+          <button data-v="on">开</button><button data-v="off">关</button>
+        </div>
+      </div>
+      <div class="set-row" id="row-sens"><span>倾斜灵敏度</span>
         <div class="seg" id="seg-sens">
           <button data-v="high">灵敏</button><button data-v="mid">标准</button><button data-v="low">迟钝</button>
         </div>
       </div>
-      <div class="set-row"><span>倾斜方向</span>
+      <div class="set-row" id="row-swap"><span>倾斜方向</span>
         <div class="seg" id="seg-swap">
           <button data-v="no">下倾=正确</button><button data-v="yes">下倾=跳过</button>
         </div>
@@ -118,7 +123,7 @@
         </div>
       </div>
       <div class="set-note">倾斜玩法：开局倒数时摆好姿势做基准，之后「屏幕朝下压」= 正确，「屏幕翻起来」= 跳过。
-        首次开局会弹出「动作与方向」权限，请点允许；未授权时可用点按屏幕左右两侧代替。</div>
+        首次开局会弹出「动作与方向」权限，请点允许。关闭倾斜控制后，用点按屏幕左右两侧玩（左跳过、右正确）。</div>
       <div class="m-btns">
         <button class="btn gray" id="btn-clear">清除战绩</button>
         <button class="btn blue" id="btn-close-set">完成</button>
