@@ -1,0 +1,13 @@
+{
+  "name": "tilt-charades",
+  "version": "1.0.0",
+  "description": "你来比划我来猜小游戏（PWA，iPad 倾斜操作）",
+  "main": "serve.js",
+  "scripts": {
+    "start": "node serve.js",
+    "icons": "node tools/gen-icons.js"
+  },
+  "keywords": ["pwa", "charades", "party-game"],
+  "license": "MIT",
+  "type": "commonjs"
+}

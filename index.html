@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>你比划我猜</title>
+  <meta name="description" content="iPad 倾斜操作的「你比划我猜」聚会小游戏（PWA）">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="你比划我猜">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============ 首页：分类九宫格 ============ -->
+  <section id="screen-home" class="screen active">
+    <div class="top-bar">
+      <button id="btn-settings" class="gear" aria-label="设置">⚙️</button>
+    </div>
+    <div class="grid" id="cat-grid"></div>
+  </section>
+
+  <!-- ============ 开局设置弹窗 ============ -->
+  <div class="modal" id="modal-setup" hidden>
+    <div class="modal-card">
+      <div class="m-title" id="setup-title">分类</div>
+      <p class="m-desc" id="setup-desc"></p>
+      <div class="dur-box">
+        <div class="dur-label">请选择每局时长</div>
+        <div class="dur-dots" id="dur-dots"></div>
+        <div class="dur-nums"><span>60s</span><span>120s</span><span>180s</span><span>240s</span><span>300s</span></div>
+      </div>
+      <div class="m-btns">
+        <button class="btn blue" id="btn-back">返回</button>
+        <button class="btn blue" id="btn-start">开始</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 倒数准备 ============ -->
+  <section id="screen-countdown" class="screen game-screen">
+    <div class="game-frame">
+      <div class="game-card">
+        <div class="big-text" id="cd-text">准备!</div>
+        <div class="sub-hint" id="cd-hint">摆好姿势，正对观众</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 猜词进行中 ============ -->
+  <section id="screen-play" class="screen game-screen">
+    <div class="game-frame">
+      <div class="game-card" id="play-card">
+        <div class="timer" id="play-timer">04:00</div>
+        <button id="btn-exit" aria-label="结束本局">✕</button>
+        <div class="word" id="word-el"></div>
+        <div class="zone-hint zh-left">◀ 点按跳过</div>
+        <div class="zone-hint zh-right">点按正确 ▶</div>
+        <div class="flash hiddenf" id="flash"><span id="flash-text"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 结算 ============ -->
+  <section id="screen-result" class="screen game-screen">
+    <div class="game-frame">
+      <div class="game-card dark result-card">
+        <div class="result-title" id="result-title">时间到！</div>
+        <div class="result-score"><span id="result-count">0</span><small> 个</small></div>
+        <div class="result-sub" id="result-sub"></div>
+        <div class="result-cols">
+          <div class="result-col ok"><h4>✅ 答对</h4><div class="chips" id="list-ok"></div></div>
+          <div class="result-col skip"><h4>⏭️ 跳过</h4><div class="chips" id="list-skip"></div></div>
+        </div>
+        <div class="result-hist" id="result-hist"></div>
+        <div class="result-btns">
+          <button class="btn green" id="btn-again">再来一局</button>
+          <button class="btn blue" id="btn-home">返回</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 暂停弹窗 ============ -->
+  <div class="modal" id="modal-pause" hidden>
+    <div class="modal-card">
+      <div class="m-title small" id="pause-title">已暂停</div>
+      <p class="m-sub" id="pause-sub"></p>
+      <div class="m-btns">
+        <button class="btn green" id="btn-resume">继续游戏</button>
+        <button class="btn gray" id="btn-finish">结束本局</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 设置弹窗 ============ -->
+  <div class="modal" id="modal-settings" hidden>
+    <div class="modal-card">
+      <div class="m-title small">设置</div>
+      <div class="set-row"><span>倾斜灵敏度</span>
+        <div class="seg" id="seg-sens">
+          <button data-v="high">灵敏</button><button data-v="mid">标准</button><button data-v="low">迟钝</button>
+        </div>
+      </div>
+      <div class="set-row"><span>倾斜方向</span>
+        <div class="seg" id="seg-swap">
+          <button data-v="no">下倾=正确</button><button data-v="yes">下倾=跳过</button>
+        </div>
+      </div>
+      <div class="set-row"><span>音效</span>
+        <div class="seg" id="seg-sound">
+          <button data-v="on">开</button><button data-v="off">关</button>
+        </div>
+      </div>
+      <div class="set-note">倾斜玩法：开局倒数时摆好姿势做基准，之后「屏幕朝下压」= 正确，「屏幕翻起来」= 跳过。
+        首次开局会弹出「动作与方向」权限，请点允许；未授权时可用点按屏幕左右两侧代替。</div>
+      <div class="m-btns">
+        <button class="btn gray" id="btn-clear">清除战绩</button>
+        <button class="btn blue" id="btn-close-set">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 暂停遮罩 / 旋转提示 / Toast ============ -->
+  <div id="rotate-overlay"><span class="em">🔄</span>请横屏游玩</div>
+  <div id="toast"></div>
+
+  <script src="js/words.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/tilt.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
