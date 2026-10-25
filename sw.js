@@ -1,6 +1,6 @@
 // Service Worker：预缓存全部资源，装进主屏幕后可完全离线玩。
 // 改动了任何静态文件后，把 VERSION 换一个值（如 v1.0.1）即可让客户端更新。
-var VERSION = 'tilt-charades-v1.2.3';
+var VERSION = 'tilt-charades-v1.2.4'; // 与 js/app.js 的 APP_VERSION 保持一致
 var ASSETS = [
   './',
   './index.html',

@@ -206,6 +206,11 @@ body {
 }
 .seg button.on { background: #4DABF7; color: #fff; }
 .set-note { font-size: 13px; color: #A0855A; line-height: 1.7; margin: 6px 0 16px; }
+.ver {
+  display: block; margin: 14px auto 0; border: none; background: transparent;
+  color: #C7AE85; font-size: 13px; cursor: pointer; font-family: inherit;
+}
+.ver:active { transform: scale(.96); }
 
 /* 战绩 */
 .stats-card { width: min(92vw, 540px); }

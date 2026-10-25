@@ -5,6 +5,8 @@
   var $ = function (id) { return document.getElementById(id); };
   var SETTINGS_KEY = 'tc.settings.v2'; // 升版本让老用户已存储的 tilt: true 失效，改用新默认
   var HIST_KEY = 'tc.history.v1';
+  var APP_VERSION = 'v1.2.4'; // 与 sw.js 的 VERSION 保持一致（改动静态文件时同步更新）
+  var EASTER_EGG = 'harper 💗 April';
   var DURATIONS = [60, 120, 180, 240, 300];
   var SENS_ANGLE = { high: 22, mid: 30, low: 38 };
   var DEFAULTS = { tilt: false, sens: 'mid', sound: true, swap: false, duration: 240 };
@@ -61,7 +63,8 @@
   function fmtDate(t) {
     var d = new Date(t);
     function p(n) { return (n < 10 ? '0' : '') + n; }
-    return p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' +
+      p(d.getHours()) + ':' + p(d.getMinutes());
   }
   // 对局用时：结束前实际进行的秒数（老记录没有 used 字段时用设置的时长兜底）
   function fmtUsed(r) {
@@ -388,6 +391,8 @@
 
   $('btn-settings').addEventListener('click', function () { $('modal-settings').hidden = false; });
   $('btn-close-set').addEventListener('click', function () { $('modal-settings').hidden = true; });
+  $('btn-version').textContent = APP_VERSION;
+  $('btn-version').addEventListener('click', function () { toast(EASTER_EGG, 3000); });
 
   // ---------- 战绩弹窗 ----------
   var clearArmed = false;
