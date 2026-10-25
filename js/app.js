@@ -5,7 +5,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var SETTINGS_KEY = 'tc.settings.v2'; // 升版本让老用户已存储的 tilt: true 失效，改用新默认
   var HIST_KEY = 'tc.history.v1';
-  var APP_VERSION = 'v1.2.4'; // 与 sw.js 的 VERSION 保持一致（改动静态文件时同步更新）
+  var APP_VERSION = 'v1.2.6'; // 与 sw.js 的 VERSION 保持一致（改动静态文件时同步更新）
   var EASTER_EGG = 'harper 💗 April';
   var DURATIONS = [60, 120, 180, 240, 300];
   var SENS_ANGLE = { high: 22, mid: 30, low: 38 };
@@ -104,15 +104,35 @@
       b.className = 'cat-card';
       b.style.background = cat.bg;
       b.setAttribute('aria-label', cat.name);
+      // emoji + 文字先渲染垫底，弱网下图片加载慢时卡片不会一片空白
+      var em = document.createElement('span');
+      em.className = 'em';
+      em.textContent = cat.emoji;
+      var nm = document.createElement('span');
+      nm.className = 'nm';
+      nm.style.color = cat.fg;
+      nm.textContent = cat.name;
+      b.appendChild(em);
+      b.appendChild(nm);
       var img = document.createElement('img');
       img.className = 'cat-img';
       img.src = cat.img;
       img.alt = cat.name;
       img.draggable = false;
-      // 图片加载失败时回退到 emoji + 文字（bg/emoji 仅作回退用）
+      img.decoding = 'async';
+      // 图片加载失败先重试两次，仍失败则移除图片，保留 emoji + 文字（bg/emoji 仅作回退用）
+      var retries = 0;
       img.addEventListener('error', function () {
-        b.innerHTML = '<span class="em">' + cat.emoji + '</span>' +
-          '<span class="nm" style="color:' + cat.fg + '">' + cat.name + '</span>';
+        if (retries < 2) {
+          retries++;
+          setTimeout(function () { img.src = cat.img; }, retries * 1200);
+        } else if (img.parentNode) {
+          img.parentNode.removeChild(img);
+        }
+      });
+      img.addEventListener('load', function () {
+        em.remove();
+        nm.remove();
       });
       b.appendChild(img);
       b.addEventListener('click', function () { openSetup(cat); });
@@ -393,6 +413,7 @@
   $('btn-close-set').addEventListener('click', function () { $('modal-settings').hidden = true; });
   $('btn-version').textContent = APP_VERSION;
   $('btn-version').addEventListener('click', function () { toast(EASTER_EGG, 3000); });
+  $('btn-update').addEventListener('click', checkUpdate);
 
   // ---------- 战绩弹窗 ----------
   var clearArmed = false;
@@ -496,5 +517,27 @@
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('./sw.js').catch(function () {});
     });
+  }
+
+  // 「检查更新」按钮：主动让 SW 对比 sw.js 是否有新版本。有更新时等新 SW 激活完
+  // （install 时已 skipWaiting）再刷新，保证这一次加载就是新版；没有更新只提示不动页面；
+  // 无 SW / 网络失败 / 超时则退回普通刷新兜底（离线时走旧缓存，不影响可用性）。
+  function checkUpdate() {
+    if (!('serviceWorker' in navigator)) { location.reload(); return; }
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg) { location.reload(); return; }
+      toast('正在检查更新…');
+      var timer = setTimeout(function () { location.reload(); }, 8000);
+      reg.update().then(function () {
+        var w = reg.waiting || reg.installing;
+        if (!w) { clearTimeout(timer); toast('已是最新版本'); return; }
+        w.addEventListener('statechange', function () {
+          if (w.state === 'activated' || w.state === 'redundant') {
+            clearTimeout(timer);
+            location.reload();
+          }
+        });
+      }).catch(function () { clearTimeout(timer); location.reload(); });
+    }).catch(function () { location.reload(); });
   }
 })();
