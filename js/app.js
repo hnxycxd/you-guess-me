@@ -3,11 +3,11 @@
   'use strict';
 
   var $ = function (id) { return document.getElementById(id); };
-  var SETTINGS_KEY = 'tc.settings.v1';
+  var SETTINGS_KEY = 'tc.settings.v2'; // 升版本让老用户已存储的 tilt: true 失效，改用新默认
   var HIST_KEY = 'tc.history.v1';
   var DURATIONS = [60, 120, 180, 240, 300];
   var SENS_ANGLE = { high: 22, mid: 30, low: 38 };
-  var DEFAULTS = { tilt: true, sens: 'mid', sound: true, swap: false, duration: 240 };
+  var DEFAULTS = { tilt: false, sens: 'mid', sound: true, swap: false, duration: 240 };
 
   var settings = loadSettings();
   var state = 'home';          // home | countdown | play | flash | paused | result
