@@ -3,8 +3,7 @@
 window.GameAudio = (function () {
   var ctx = null;
   var muted = false;
-  var correctUrl = null;
-  var correctBuffer = null;
+  var custom = {}; // 自定义音效槽：name -> { url, buffer }
 
   function ensure() {
     if (!ctx) {
@@ -17,8 +16,10 @@ window.GameAudio = (function () {
 
   function unlock() {
     ensure();
-    // 音频上下文解锁后（重）尝试加载自定义正确音效
-    if (correctUrl && !correctBuffer) loadBuffer();
+    // 音频上下文解锁后（重）尝试加载所有自定义音效
+    Object.keys(custom).forEach(function (k) {
+      if (custom[k].url && !custom[k].buffer) loadBuffer(k);
+    });
   }
 
   // 播放解码好的 mp3（Web Audio 在 iOS 上解锁一次后可随时播放，不依赖手势）
@@ -42,20 +43,21 @@ window.GameAudio = (function () {
     });
   }
 
-  // 加载自定义「正确」音效；失败时静默回退到合成音
-  function loadBuffer() {
+  // 加载自定义音效；失败时静默回退到合成音
+  function loadBuffer(name) {
     var c = ensure();
-    if (!c || !correctUrl || correctBuffer) return Promise.resolve(!!correctBuffer);
-    return fetch(correctUrl)
+    var slot = custom[name];
+    if (!c || !slot || !slot.url || slot.buffer) return Promise.resolve(!!(slot && slot.buffer));
+    return fetch(slot.url)
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.arrayBuffer(); })
       .then(function (ab) { return decode(c, ab); })
-      .then(function (buf) { correctBuffer = buf; return true; })
+      .then(function (buf) { slot.buffer = buf; return true; })
       .catch(function () { return false; });
   }
 
-  function loadCorrect(url) {
-    correctUrl = url;
-    return loadBuffer();
+  function loadCustom(name, url) {
+    custom[name] = { url: url, buffer: null };
+    return loadBuffer(name);
   }
 
   function beep(freq, dur, type, vol, delay) {
@@ -83,15 +85,18 @@ window.GameAudio = (function () {
   };
 
   function play(name) {
-    if (name === 'correct' && correctBuffer) { playBuffer(correctBuffer); return; }
+    var slot = custom[name];
+    if (slot && slot.buffer) { playBuffer(slot.buffer); return; }
     if (sounds[name]) sounds[name]();
   }
 
   return {
     unlock: unlock,
     play: play,
-    loadCorrect: loadCorrect,
-    get correctReady() { return !!correctBuffer; },
+    loadCorrect: function (url) { return loadCustom('correct', url); },
+    loadSkip: function (url) { return loadCustom('skip', url); },
+    get correctReady() { return !!(custom.correct && custom.correct.buffer); },
+    get skipReady() { return !!(custom.skip && custom.skip.buffer); },
     setMuted: function (m) { muted = m; },
     get muted() { return muted; }
   };

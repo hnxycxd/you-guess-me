@@ -1,13 +1,13 @@
 {
-  "name": "tilt-charades",
+  "name": "you-guess-me",
   "version": "1.0.0",
-  "description": "你来比划我来猜小游戏（PWA，iPad 倾斜操作）",
+  "description": "你说我来猜小游戏",
   "main": "serve.js",
   "scripts": {
     "start": "node serve.js",
     "icons": "node tools/gen-icons.js"
   },
-  "keywords": ["pwa", "charades", "party-game"],
+  "keywords": ["you-guess-me", "guess-me"],
   "license": "MIT",
   "type": "commonjs"
 }

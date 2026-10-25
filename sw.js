@@ -1,6 +1,6 @@
 // Service Worker：预缓存全部资源，装进主屏幕后可完全离线玩。
 // 改动了任何静态文件后，把 VERSION 换一个值（如 v1.0.1）即可让客户端更新。
-var VERSION = 'tilt-charades-v1.1.0';
+var VERSION = 'tilt-charades-v1.2.1';
 var ASSETS = [
   './',
   './index.html',
@@ -14,7 +14,17 @@ var ASSETS = [
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png',
-  './mp3/wo.mp3'
+  './mp3/wo.mp3',
+  './mp3/pass.mp3',
+  './img/日常生活.png',
+  './img/动物世界.png',
+  './img/成语天地.png',
+  './img/网络热词.png',
+  './img/演技比拼.png',
+  './img/随机提卡.png',
+  './img/吃货天堂.png',
+  './img/亲子乐园.png',
+  './img/K歌之王.png'
 ];
 
 self.addEventListener('install', function (e) {

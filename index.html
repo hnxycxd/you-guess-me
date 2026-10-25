@@ -21,6 +21,11 @@
   <section id="screen-home" class="screen active">
     <div class="top-bar">
       <button id="btn-settings" class="gear" aria-label="设置">⚙️</button>
+      <button id="btn-stats" class="gear" aria-label="战绩">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 20v-8M12 20V5M19 20v-5M3 20h18" />
+        </svg>
+      </button>
     </div>
     <div class="grid" id="cat-grid"></div>
   </section>
@@ -125,8 +130,27 @@
       <div class="set-note">倾斜玩法：开局倒数时摆好姿势做基准，之后「屏幕朝下压」= 正确，「屏幕翻起来」= 跳过。
         首次开局会弹出「动作与方向」权限，请点允许。关闭倾斜控制后，用点按屏幕左右两侧玩（左跳过、右正确）。</div>
       <div class="m-btns">
-        <button class="btn gray" id="btn-clear">清除战绩</button>
         <button class="btn blue" id="btn-close-set">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 战绩弹窗 ============ -->
+  <div class="modal" id="modal-stats" hidden>
+    <div class="modal-card stats-card">
+      <div class="m-title small">战绩</div>
+      <div class="stats-box">
+        <table class="stats-table" id="stats-table">
+          <thead>
+            <tr><th>日期</th><th>对局用时</th><th>正确数</th><th>跳过数</th></tr>
+          </thead>
+          <tbody id="stats-body"></tbody>
+        </table>
+        <div class="stats-empty" id="stats-empty">还没有战绩，去玩一局吧！</div>
+      </div>
+      <div class="m-btns">
+        <button class="btn gray" id="btn-clear-stats">清空战绩</button>
+        <button class="btn blue" id="btn-close-stats">关闭</button>
       </div>
     </div>
   </div>

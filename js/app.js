@@ -58,6 +58,18 @@
     var m = Math.floor(sec / 60), s = sec % 60;
     return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
   }
+  function fmtDate(t) {
+    var d = new Date(t);
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  // 对局用时：结束前实际进行的秒数（老记录没有 used 字段时用设置的时长兜底）
+  function fmtUsed(r) {
+    var s = typeof r.used === 'number' ? r.used : r.dur;
+    var m = Math.floor(s / 60), sec = s % 60;
+    if (sec === 0) return m + ' 分钟';
+    return (m > 0 ? m + ' 分 ' : '') + sec + ' 秒';
+  }
   function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   // ---------- 屏幕切换 ----------
@@ -88,8 +100,18 @@
       var b = document.createElement('button');
       b.className = 'cat-card';
       b.style.background = cat.bg;
-      b.innerHTML = '<span class="em">' + cat.emoji + '</span>' +
-        '<span class="nm" style="color:' + cat.fg + '">' + cat.name + '</span>';
+      b.setAttribute('aria-label', cat.name);
+      var img = document.createElement('img');
+      img.className = 'cat-img';
+      img.src = cat.img;
+      img.alt = cat.name;
+      img.draggable = false;
+      // 图片加载失败时回退到 emoji + 文字（bg/emoji 仅作回退用）
+      img.addEventListener('error', function () {
+        b.innerHTML = '<span class="em">' + cat.emoji + '</span>' +
+          '<span class="nm" style="color:' + cat.fg + '">' + cat.name + '</span>';
+      });
+      b.appendChild(img);
       b.addEventListener('click', function () { openSetup(cat); });
       grid.appendChild(b);
     });
@@ -295,7 +317,8 @@
     document.body.classList.remove('touch-mode');
     GameAudio.play('end');
 
-    pushHistory({ t: Date.now(), cat: round.cat.name, dur: round.duration, ok: round.correct.length, skip: round.skipped.length });
+    var used = Math.round(Math.min(round.duration, round.duration - remainingSec()));
+    pushHistory({ t: Date.now(), cat: round.cat.name, dur: round.duration, used: used, ok: round.correct.length, skip: round.skipped.length });
     $('result-title').textContent = remainingSec() <= 0 ? '时间到！' : '本局结束';
     $('result-count').textContent = round.correct.length;
     $('result-sub').textContent = round.cat.name + ' · ' + round.duration + ' 秒';
@@ -355,6 +378,7 @@
   buildGrid();
   GameAudio.setMuted(!settings.sound);
   GameAudio.loadCorrect('mp3/wo.mp3'); // 自定义「正确」音效，失败时自动回退合成音
+  GameAudio.loadSkip('mp3/pass.mp3');  // 自定义「跳过」音效，失败时自动回退合成音
 
   // 首次交互解锁音频（iOS 要求）
   document.addEventListener('pointerdown', function once() {
@@ -364,6 +388,54 @@
 
   $('btn-settings').addEventListener('click', function () { $('modal-settings').hidden = false; });
   $('btn-close-set').addEventListener('click', function () { $('modal-settings').hidden = true; });
+
+  // ---------- 战绩弹窗 ----------
+  var clearArmed = false;
+  var clearReset = null;
+  function disarmClear() {
+    clearArmed = false;
+    clearTimeout(clearReset);
+    var btn = $('btn-clear-stats');
+    btn.textContent = '清空战绩';
+    btn.classList.remove('danger');
+  }
+  function renderStats() {
+    var list = loadHistory().slice().reverse(); // 新一局在前
+    var body = $('stats-body');
+    body.innerHTML = '';
+    $('stats-table').hidden = list.length === 0;
+    $('stats-empty').hidden = list.length !== 0;
+    list.forEach(function (r) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + fmtDate(r.t) + '</td>' +
+        '<td>' + fmtUsed(r) + '</td>' +
+        '<td class="num ok">' + r.ok + '</td>' +
+        '<td class="num skip">' + r.skip + '</td>';
+      body.appendChild(tr);
+    });
+  }
+  function openStats() {
+    disarmClear();
+    renderStats();
+    $('modal-stats').hidden = false;
+  }
+  $('btn-stats').addEventListener('click', openStats);
+  $('btn-close-stats').addEventListener('click', function () { $('modal-stats').hidden = true; });
+  $('btn-clear-stats').addEventListener('click', function () {
+    var btn = this;
+    if (!clearArmed) {
+      clearArmed = true;
+      btn.textContent = '再点一次确认';
+      btn.classList.add('danger');
+      clearTimeout(clearReset);
+      clearReset = setTimeout(disarmClear, 2600);
+      return;
+    }
+    disarmClear();
+    try { localStorage.removeItem(HIST_KEY); } catch (e) {}
+    renderStats();
+    toast('战绩已清空');
+  });
   $('btn-start').addEventListener('click', onStart);
   $('btn-back').addEventListener('click', function () { $('modal-setup').hidden = true; });
 
@@ -380,26 +452,6 @@
     $('row-swap').hidden = !settings.tilt;
   }
   applyTiltRows();
-
-  var clearArmed = false;
-  var clearReset = null;
-  $('btn-clear').addEventListener('click', function () {
-    var btn = this;
-    if (!clearArmed) {
-      clearArmed = true;
-      btn.textContent = '再点一次确认';
-      btn.classList.add('danger');
-      clearTimeout(clearReset);
-      clearReset = setTimeout(function () { clearArmed = false; btn.textContent = '清除战绩'; btn.classList.remove('danger'); }, 2600);
-      return;
-    }
-    clearTimeout(clearReset);
-    clearArmed = false;
-    btn.textContent = '清除战绩';
-    btn.classList.remove('danger');
-    try { localStorage.removeItem(HIST_KEY); } catch (e) {}
-    toast('战绩已清除');
-  });
 
   // 点按降级：左半屏跳过 / 右半屏正确
   $('play-card').addEventListener('pointerdown', function (e) {
